@@ -1,9 +1,80 @@
 #include "DisasterPlanning.h"
 using namespace std;
+#include <Map>
+#include <Set>
+#include <Optional>
 
-Optional<Set<string>> placeEmergencySupplies(const Map<string, Set<string>>& roadNetwork,
-                                             int numCities) {
-    /* TODO: Delete this comment and next few lines, then implement this function. */
+Optional<Set<string>> placeEmergencySupplies(const Map<string, Set<string>>& roadNetwork, int numCities) {
+    if (numCities < 0) {
+        error("Number of cities cannot be negative.");
+    }
+
+    Set<string> coveredCities;
+    Set<string> allCities = roadNetwork.keys();
+    return placeEmergencySuppliesHelper(roadNetwork, numCities, coveredCities, allCities);
+}
+
+Optional<Set<string>> placeEmergencySuppliesHelper(const Map<string, Set<string>>& roadNetwork,
+                                                   int numCities,
+                                                   Set<string> coveredCities,
+                                                   const Set<string>& remainingCities) {
+    // Check if all cities are covered
+    if (remainingCities.isEmpty()) {
+        return Set<string>(); // Return empty set as we have covered all
+    }
+
+    // Pick an uncovered city
+    string uncoveredCity = *remainingCities.first();
+
+    // Try covering this city by placing supplies in it or in its neighbors
+    Set<string> neighbors = roadNetwork[uncoveredCity];
+
+    // Option 1: Place supplies in the uncovered city itself
+    if (numCities > 0) {
+        coveredCities.add(uncoveredCity);
+        Set<string> newRemainingCities = remainingCities - Set<string>{uncoveredCity};
+        for (const string& neighbor : neighbors) {
+            coveredCities.add(neighbor);
+        }
+
+        Optional<Set<string>> result = placeEmergencySuppliesHelper(roadNetwork, numCities - 1, coveredCities, newRemainingCities);
+        if (result != Nothing) {
+            result.value().add(uncoveredCity); // Include the city we just covered
+            return result; // Successful coverage
+        }
+
+        // Backtrack
+        coveredCities.remove(uncoveredCity);
+        for (const string& neighbor : neighbors) {
+            coveredCities.remove(neighbor);
+        }
+    }
+
+    // Option 2: Place supplies in one of the neighbors
+    for (const string& neighbor : neighbors) {
+        if (numCities > 0 && !coveredCities.contains(neighbor)) {
+            coveredCities.add(neighbor);
+            Set<string> newRemainingCities = remainingCities - Set<string>{uncoveredCity};
+            for (const string& city : roadNetwork[neighbor]) {
+                coveredCities.add(city);
+            }
+
+            Optional<Set<string>> result = placeEmergencySuppliesHelper(roadNetwork, numCities - 1, coveredCities, newRemainingCities);
+            if (result != Nothing) {
+                result.value().add(neighbor); // Include the neighbor we just covered
+                return result; // Successful coverage
+            }
+
+            // Backtrack
+            coveredCities.remove(neighbor);
+            for (const string& city : roadNetwork[neighbor]) {
+                coveredCities.remove(city);
+            }
+        }
+    }
+
+    return Nothing; // No successful coverage found
+}
     (void) roadNetwork;
     (void) numCities;
     return Nothing;
@@ -49,7 +120,19 @@ bool isCovered(const string& city,
 
 /* * * * * * Test Cases Below This Point * * * * * */
 
-/* TODO: Add your own custom tests here! */
+STUDENT_TEST("Test placeEmergencySupplies with simple network") {
+    Map<string, Set<string>> roadNetwork;
+    roadNetwork["A"] = {"B", "C"};
+    roadNetwork["B"] = {"A", "D"};
+    roadNetwork["C"] = {"A", "D"};
+    roadNetwork["D"] = {"B", "C", "E"};
+    roadNetwork["E"] = {"D"};
+
+    Optional<Set<string>> result = placeEmergencySupplies(roadNetwork, 2);
+    assert(result != Nothing);
+    // Check that the result includes the necessary cities for coverage
+    assert(result.value().contains("D")); // Expected to cover all cities
+}
 
 
 

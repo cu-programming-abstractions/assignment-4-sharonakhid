@@ -1,19 +1,102 @@
 #include "ShiftScheduling.h"
 using namespace std;
 
+#include <Set>
+#include <Optional>
+
 int numSchedulesFor(const Set<Shift>& shifts, int maxHours) {
-    /* TODO: Delete this comment and the lines below it, then implement
-     * this function.
-     */
+    if (maxHours < 0) {
+        error("Max hours cannot be negative.");
+    }
+    return numSchedulesForHelper(shifts, maxHours, 0, 0);
+}
+
+int numSchedulesForHelper(const Set<Shift>& shifts, int maxHours, int currentHours, int index) {
+    // Base case: When we reach the end of the shifts
+    if (index >= shifts.size()) {
+        return 1; // Found a valid schedule (including the empty schedule)
+    }
+
+    int totalSchedules = 0;
+    const Shift& currentShift = shifts[index];
+
+    // Option 1: Exclude the current shift
+    totalSchedules += numSchedulesForHelper(shifts, maxHours, currentHours, index + 1);
+
+    // Option 2: Include the current shift if it doesn't exceed maxHours and doesn't overlap
+    if (currentHours + lengthOf(currentShift) <= maxHours) {
+        bool overlaps = false;
+        for (int i = 0; i < index; ++i) {
+            if (overlapsWith(currentShift, shifts[i])) {
+                overlaps = true;
+                break;
+            }
+        }
+        if (!overlaps) {
+            totalSchedules += numSchedulesForHelper(shifts, maxHours, currentHours + lengthOf(currentShift), index + 1);
+        }
+    }
+
+    return totalSchedules;
+}
     (void) shifts;
     (void) maxHours;
     return -1;
 }
 
 Set<Shift> maxProfitSchedule(const Set<Shift>& shifts, int maxHours) {
-    /* TODO: Delete this comment and the lines below it, then implement
-     * this function.
-     */
+      return maxProfitScheduleHelper(shifts, maxHours, 0, 0, Set<Shift>());
+    }
+
+    Set<Shift> maxProfitScheduleHelper(const Set<Shift>& shifts, int maxHours, int currentHours, int index, Set<Shift> currentSchedule) {
+        if (index >= shifts.size()) {
+            return currentSchedule; // Return the current schedule (base case)
+        }
+
+        Set<Shift> bestSchedule = currentSchedule;
+        int bestProfit = 0;
+
+        const Shift& currentShift = shifts[index];
+
+        // Option 1: Exclude the current shift
+        Set<Shift> scheduleWithoutCurrent = maxProfitScheduleHelper(shifts, maxHours, currentHours, index + 1, currentSchedule);
+        int profitWithoutCurrent = calculateTotalProfit(scheduleWithoutCurrent);
+        if (profitWithoutCurrent > bestProfit) {
+            bestProfit = profitWithoutCurrent;
+            bestSchedule = scheduleWithoutCurrent;
+        }
+
+        // Option 2: Include the current shift
+        if (currentHours + lengthOf(currentShift) <= maxHours) {
+            bool overlaps = false;
+            for (int i = 0; i < index; ++i) {
+                if (overlapsWith(currentShift, shifts[i])) {
+                    overlaps = true;
+                    break;
+                }
+            }
+            if (!overlaps) {
+                currentSchedule.add(currentShift);
+                Set<Shift> scheduleWithCurrent = maxProfitScheduleHelper(shifts, maxHours, currentHours + lengthOf(currentShift), index + 1, currentSchedule);
+                int profitWithCurrent = calculateTotalProfit(scheduleWithCurrent);
+                if (profitWithCurrent > bestProfit) {
+                    bestProfit = profitWithCurrent;
+                    bestSchedule = scheduleWithCurrent;
+                }
+                currentSchedule.remove(currentShift); // Backtrack
+            }
+        }
+
+        return bestSchedule;
+    }
+
+    int calculateTotalProfit(const Set<Shift>& schedule) {
+        int totalProfit = 0;
+        for (const Shift& shift : schedule) {
+            totalProfit += profitFor(shift);
+        }
+        return totalProfit;
+    }
     (void) shifts;
     (void) maxHours;
     return {};
@@ -25,10 +108,17 @@ Set<Shift> maxProfitSchedule(const Set<Shift>& shifts, int maxHours) {
 /* * * * * * Test Cases * * * * * */
 #include "GUI/SimpleTest.h"
 
-/* TODO: Add your own tests here. You know the drill - look for edge cases, think about
- * very small and very large cases, etc.
- */
+STUDENT_TEST("Test numSchedulesFor with simple shifts") {
+    Set<Shift> shifts = {/* Add test shifts */};
+    int result = numSchedulesFor(shifts, 20);
+    assert(result == /* Expected number of schedules */);
+}
 
+STUDENT_TEST("Test maxProfitSchedule with simple shifts") {
+    Set<Shift> shifts = {/* Add test shifts with profits */};
+    Set<Shift> result = maxProfitSchedule(shifts, 20);
+    // Assert the expected shifts in result
+}
 
 
 
